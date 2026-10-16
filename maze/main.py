@@ -69,6 +69,7 @@ class GameState:
     visited: set[Coordinate] = field(default_factory=set)
     blue_phase: bool = False
     won: bool = False
+    visit_counts: dict[Coordinate, int] = field(default_factory=dict)
 
     @property
     def height(self) -> int:
@@ -102,6 +103,11 @@ class GameState:
             self.won = True
         elif destination != self.start:
             self.visited.add(destination)
+            if (
+                0 <= destination[0] < self.height
+                and 0 <= destination[1] < self.width
+            ):
+                self.visit_counts[destination] = self.visit_counts.get(destination, 0) + 1
         return True
 
     def update_blink(self, now: float) -> bool:
@@ -133,7 +139,9 @@ def _draw_game(
             if tile == "#":
                 pair = color_pairs["wall"]
             elif logical_cell in state.visited:
-                pair = color_pairs["orange"]
+                pair = color_pairs[
+                    "yellow" if state.visit_counts.get(logical_cell, 1) >= 2 else "orange"
+                ]
             else:
                 continue
             stdscr.addstr(row, 2 + column * 2, "  ", curses.color_pair(pair))
@@ -169,6 +177,8 @@ def _underlying_color(state: GameState, color_pairs: dict[str, int]) -> int:
     if state.position == state.end:
         return color_pairs["red"]
     if state.position in state.visited:
+        if state.visit_counts.get(state.position, 1) >= 2:
+            return color_pairs["yellow"]
         return color_pairs["orange"]
     return color_pairs["passage"]
 
@@ -186,11 +196,13 @@ def _initialize_colors() -> dict[str, int]:
     curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_GREEN)
     curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_RED)
     has_256_colors = getattr(curses, "COLORS", 0) >= 256
-    orange = 208 if has_256_colors else curses.COLOR_YELLOW
+    orange = 208 if has_256_colors else curses.COLOR_RED
     blue = 21 if has_256_colors else curses.COLOR_BLUE
+    yellow = 226 if has_256_colors else curses.COLOR_YELLOW
     curses.init_pair(5, curses.COLOR_BLACK, orange)
     curses.init_pair(6, curses.COLOR_BLACK, blue)
     curses.init_pair(7, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    curses.init_pair(8, curses.COLOR_BLACK, yellow)
     return {
         "passage": 1,
         "wall": 2,
@@ -199,6 +211,7 @@ def _initialize_colors() -> dict[str, int]:
         "orange": 5,
         "blue": 6,
         "message": 7,
+        "yellow": 8,
     }
 
 
