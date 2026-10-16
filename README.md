@@ -6,7 +6,7 @@
 
 ## Pong
 
-Todo
+Run `make` from the `pong` directory to launch the blank white terminal shell. Press `N` to redraw the screen or `E` to exit.
 
 ## Snake
 

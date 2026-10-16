@@ -5,7 +5,9 @@ from collections import deque
 from unittest.mock import Mock, call, patch
 
 from main import (
+    CONTROL_MESSAGE,
     GameState,
+    RESIZE_EXIT,
     _draw_game,
     _initialize_colors,
     _player_color,
@@ -122,7 +124,7 @@ class MazeTest(unittest.TestCase):
                     with patch(
                         "main.curses.curs_set", side_effect=lambda visibility: 1
                     ) as cursor_set:
-                        self.assertEqual(_run(stdscr), 0)
+                        self.assertEqual(_run(stdscr), RESIZE_EXIT)
 
         cursor_set.assert_has_calls([call(0), call(1)])
         stdscr.bkgd.assert_called_once_with(" ", 1)
@@ -131,9 +133,9 @@ class MazeTest(unittest.TestCase):
         self.assertTrue(all(2 <= item.args[1] <= 15 for item in painted))
         self.assertTrue(all(item.args[2] == "  " for item in painted))
         self.assertIn(call(2, 4, "  ", 4), painted)
-        self.assertIn(call(7, 12, "  ", 3), painted)
+        self.assertIn(call(6, 12, "  ", 3), painted)
         self.assertIn(call(3, 2, "  ", 2), painted)
-        stdscr.addnstr.assert_any_call(0, 0, "Arrows: move   N: new maze   E: exit", 19, 7)
+        stdscr.addnstr.assert_any_call(0, 0, CONTROL_MESSAGE, 19, 7)
 
     def test_win_renderer_blinks_completion_message_on_bottom_row(self) -> None:
         stdscr = Mock()

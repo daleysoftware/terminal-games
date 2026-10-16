@@ -204,7 +204,7 @@ def _initialize_colors() -> dict[str, int]:
     curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_GREEN)
     curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_RED)
     has_256_colors = getattr(curses, "COLORS", 0) >= 256
-    orange = 208 if has_256_colors else curses.COLOR_RED
+    orange = 208 if has_256_colors else curses.COLOR_YELLOW
     blue = 21 if has_256_colors else curses.COLOR_BLUE
     yellow = 226 if has_256_colors else curses.COLOR_YELLOW
     curses.init_pair(5, curses.COLOR_BLACK, orange)
