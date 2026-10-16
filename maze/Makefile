@@ -2,6 +2,8 @@ PYTHON ?= python3
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
+.DEFAULT_GOAL := run
+
 .PHONY: setup run test clean
 
 setup: $(VENV_PYTHON)
