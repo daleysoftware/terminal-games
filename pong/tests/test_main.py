@@ -23,7 +23,40 @@ class MainTest(unittest.TestCase):
         self.assertEqual(result.stdout, "")
         self.assertEqual(result.stderr, "")
 
-    def test_paints_white_and_restores_terminal_on_exit_or_resize(self) -> None:
+    def test_too_small_terminal_exits_with_size_requirement(self) -> None:
+        game = Path(__file__).resolve().parents[1] / "main.py"
+        master, slave = pty.openpty()
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 7, 14, 0, 0))
+        process = subprocess.Popen(
+            [sys.executable, str(game)],
+            stdin=slave,
+            stdout=slave,
+            stderr=slave,
+            env={**os.environ, "TERM": "xterm-256color"},
+        )
+        output = b""
+        try:
+            deadline = time.monotonic() + 2
+            while process.poll() is None and time.monotonic() < deadline:
+                if select.select([master], [], [], 0.05)[0]:
+                    output += os.read(master, 65536)
+            while select.select([master], [], [], 0)[0]:
+                try:
+                    output += os.read(master, 65536)
+                except OSError:
+                    break
+
+            self.assertEqual(process.poll(), 1)
+            self.assertIn(b"Terminal must be at least 8 rows and 14 columns.", output)
+            self.assertIn(b"\x1b[?1049l", output)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            os.close(master)
+            os.close(slave)
+
+    def test_paints_black_grid_and_restores_terminal_on_exit_or_resize(self) -> None:
         game = Path(__file__).resolve().parents[1] / "main.py"
         for exit_signal in (None, signal.SIGWINCH):
             with self.subTest(exit_signal=exit_signal):
@@ -40,10 +73,22 @@ class MainTest(unittest.TestCase):
                 output = b""
                 try:
                     deadline = time.monotonic() + 2
-                    while b"\x1b[47m" not in output and time.monotonic() < deadline:
+                    while (
+                        (
+                            b"\x1b[44m" not in output
+                            or b"\x1b[41m" not in output
+                            or b"\x1b[43m" not in output
+                        )
+                        and time.monotonic() < deadline
+                    ):
                         if select.select([master], [], [], 0.05)[0]:
                             output += os.read(master, 65536)
                     self.assertIn(b"\x1b[47m", output)
+                    self.assertIn(b"\x1b[40m", output)
+                    self.assertIn(b"\x1b[44m", output)
+                    self.assertIn(b"\x1b[41m", output)
+                    self.assertIn(b"\x1b[43m", output)
+                    self.assertIn(b"Arrows: move; N: new game; E: exit", output)
 
                     if exit_signal is None:
                         os.write(master, b"n")
