@@ -106,7 +106,7 @@ class MainTest(unittest.TestCase):
                     break
 
             self.assertEqual(process.poll(), 1)
-            self.assertIn(b"Terminal must be at least 7 rows and 10 columns.", output)
+            self.assertIn(b"Terminal must be at least 8 rows and 10 columns.", output)
             self.assertIn(b"\x1b[?1049l", output)
             self.assertNotIn(b"Traceback", output)
         finally:

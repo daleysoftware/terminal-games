@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 
 Coordinate = tuple[int, int]
 BLINK_INTERVAL = 0.5
-WIN_MESSAGE = "Maze complete! Press Ctrl-C to exit"
+CONTROL_MESSAGE = "Arrows: move   N: new maze   E: exit"
+WIN_MESSAGE = "Maze complete! Press E to exit"
 DIRECTIONS = {
     curses.KEY_UP: (-1, 0),
     curses.KEY_DOWN: (1, 0),
@@ -126,9 +127,9 @@ def _draw_game(
     color_pairs: dict[str, int],
 ) -> None:
     stdscr.erase()
-    for row, line in enumerate(state.maze, start=2):
+    for row, line in enumerate(state.maze, start=3):
         for column, tile in enumerate(line):
-            logical_cell = (row - 2, column)
+            logical_cell = (row - 3, column)
             if tile == "#":
                 pair = color_pairs["wall"]
             elif logical_cell in state.visited:
@@ -140,13 +141,13 @@ def _draw_game(
     start_row, start_column = state.start
     end_row, end_column = state.end
     stdscr.addstr(
-        start_row + 2,
+        start_row + 3,
         2 + start_column * 2,
         "  ",
         curses.color_pair(color_pairs["green"]),
     )
     stdscr.addstr(
-        end_row + 2,
+        end_row + 3,
         2 + end_column * 2,
         "  ",
         curses.color_pair(color_pairs["red"]),
@@ -154,10 +155,11 @@ def _draw_game(
 
     player_pair = _player_color(state, color_pairs)
     player_row, player_column = state.position
-    stdscr.addstr(player_row + 2, 2 + player_column * 2, "  ", curses.color_pair(player_pair))
+    stdscr.addstr(player_row + 3, 2 + player_column * 2, "  ", curses.color_pair(player_pair))
+    rows, columns = stdscr.getmaxyx()
+    stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
     if state.won:
-        rows, columns = stdscr.getmaxyx()
-        stdscr.addnstr(0, 0, WIN_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
+        stdscr.addnstr(1, 0, WIN_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
     stdscr.refresh()
 
 
@@ -202,7 +204,7 @@ def _initialize_colors() -> dict[str, int]:
 
 def _run(stdscr: curses.window) -> int:
     rows, columns = stdscr.getmaxyx()
-    if rows < 7 or columns < 10:
+    if rows < 8 or columns < 10:
         return 1
 
     try:
@@ -214,17 +216,20 @@ def _run(stdscr: curses.window) -> int:
         color_pairs = _initialize_colors()
         stdscr.bkgd(" ", curses.color_pair(1))
         maze_width = (columns - 4) // 2
-        maze_height = rows - 4
-        maze, start, end = generate_maze(maze_height, maze_width, random.Random())
-        start_position = (maze_height, start[1])
-        end_position = (-1, end[1])
-        state = GameState(
-            maze=maze,
-            start=start_position,
-            end=end_position,
-            position=start_position,
-            last_blink=time.monotonic(),
-        )
+        maze_height = rows - 5
+
+        def new_game() -> GameState:
+            maze, start, end = generate_maze(maze_height, maze_width, random.Random())
+            start_position = (maze_height, start[1])
+            return GameState(
+                maze=maze,
+                start=start_position,
+                end=(-1, end[1]),
+                position=start_position,
+                last_blink=time.monotonic(),
+            )
+
+        state = new_game()
         stdscr.timeout(50)
         _draw_game(stdscr, state, color_pairs)
 
@@ -232,11 +237,17 @@ def _run(stdscr: curses.window) -> int:
             key = stdscr.getch()
             if key == curses.KEY_RESIZE:
                 return 0
-            now = time.monotonic()
-            should_draw = state.update_blink(now)
-            direction = DIRECTIONS.get(key)
-            if direction is not None and state.move(direction):
+            if key in (ord("e"), ord("E")):
+                return 0
+            if key in (ord("n"), ord("N")):
+                state = new_game()
                 should_draw = True
+            else:
+                now = time.monotonic()
+                should_draw = state.update_blink(now)
+                direction = DIRECTIONS.get(key)
+                if direction is not None and state.move(direction):
+                    should_draw = True
             if should_draw:
                 _draw_game(stdscr, state, color_pairs)
     finally:
@@ -254,7 +265,7 @@ def main() -> int:
         return 0
 
     if result:
-        print("Terminal must be at least 7 rows and 10 columns.", file=sys.stderr)
+        print("Terminal must be at least 8 rows and 10 columns.", file=sys.stderr)
     return result
 
 

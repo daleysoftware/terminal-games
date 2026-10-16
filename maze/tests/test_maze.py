@@ -127,12 +127,13 @@ class MazeTest(unittest.TestCase):
         cursor_set.assert_has_calls([call(0), call(1)])
         stdscr.bkgd.assert_called_once_with(" ", 1)
         painted = stdscr.addstr.call_args_list
-        self.assertTrue(all(item.args[0] != 0 and item.args[0] != 8 for item in painted))
+        self.assertTrue(all(item.args[0] not in (0, 1, 8) for item in painted))
         self.assertTrue(all(2 <= item.args[1] <= 15 for item in painted))
         self.assertTrue(all(item.args[2] == "  " for item in painted))
-        self.assertIn(call(1, 4, "  ", 4), painted)
+        self.assertIn(call(2, 4, "  ", 4), painted)
         self.assertIn(call(7, 12, "  ", 3), painted)
-        self.assertIn(call(2, 2, "  ", 2), painted)
+        self.assertIn(call(3, 2, "  ", 2), painted)
+        stdscr.addnstr.assert_any_call(0, 0, "Arrows: move   N: new maze   E: exit", 19, 7)
 
     def test_win_renderer_shows_completion_message(self) -> None:
         stdscr = Mock()
@@ -150,9 +151,10 @@ class MazeTest(unittest.TestCase):
         with patch("main.curses.color_pair", side_effect=lambda color: color):
             _draw_game(stdscr, state, color_pairs)
 
-        stdscr.addnstr.assert_called_once_with(
-            0, 0, "Maze complete! Press Ctrl-C to exit", 60, 7
-        )
+        self.assertEqual(stdscr.addnstr.call_args_list[-2:], [
+            call(0, 0, "Arrows: move   N: new maze   E: exit", 60, 7),
+            call(1, 0, "Maze complete! Press E to exit", 60, 7),
+        ])
 
 
 if __name__ == "__main__":
