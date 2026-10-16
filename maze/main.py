@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 
 Coordinate = tuple[int, int]
 BLINK_INTERVAL = 0.5
-CONTROL_MESSAGE = "Arrows: move   N: new maze   E: exit"
-WIN_MESSAGE = "Maze complete! Press E to exit"
+CONTROL_MESSAGE = "Arrows: move; N: new maze; E: exit"
+WIN_MESSAGE = "Maze complete! Woot!"
 DIRECTIONS = {
     curses.KEY_UP: (-1, 0),
     curses.KEY_DOWN: (1, 0),
@@ -159,7 +159,7 @@ def _draw_game(
     rows, columns = stdscr.getmaxyx()
     stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
     if state.won:
-        stdscr.addnstr(1, 0, WIN_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
+        stdscr.addnstr(rows - 1, 0, WIN_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
     stdscr.refresh()
 
 
@@ -204,7 +204,7 @@ def _initialize_colors() -> dict[str, int]:
 
 def _run(stdscr: curses.window) -> int:
     rows, columns = stdscr.getmaxyx()
-    if rows < 8 or columns < 10:
+    if rows < 9 or columns < 10:
         return 1
 
     try:
@@ -216,7 +216,7 @@ def _run(stdscr: curses.window) -> int:
         color_pairs = _initialize_colors()
         stdscr.bkgd(" ", curses.color_pair(1))
         maze_width = (columns - 4) // 2
-        maze_height = rows - 5
+        maze_height = rows - 6
 
         def new_game() -> GameState:
             maze, start, end = generate_maze(maze_height, maze_width, random.Random())
@@ -265,7 +265,7 @@ def main() -> int:
         return 0
 
     if result:
-        print("Terminal must be at least 8 rows and 10 columns.", file=sys.stderr)
+        print("Terminal must be at least 9 rows and 10 columns.", file=sys.stderr)
     return result
 
 

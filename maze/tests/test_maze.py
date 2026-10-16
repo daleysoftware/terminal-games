@@ -153,7 +153,7 @@ class MazeTest(unittest.TestCase):
 
         self.assertEqual(stdscr.addnstr.call_args_list[-2:], [
             call(0, 0, "Arrows: move   N: new maze   E: exit", 60, 7),
-            call(1, 0, "Maze complete! Press E to exit", 60, 7),
+            call(19, 0, "Maze complete! Press E to exit", 60, 7),
         ])
 
 
