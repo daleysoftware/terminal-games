@@ -15,6 +15,7 @@ from main import (
     SIZE_EXIT,
     Ball,
     _advance_ball,
+    _calibrate_hybrid_horizon,
     _computer_target_y,
     _draw_ball,
     _hybrid_horizon_ticks,
@@ -24,6 +25,7 @@ from main import (
     _paddle_height,
     _project_ball_y,
     _predict_ball_y,
+    _simulate_computer_loss_turn,
     _run,
 )
 
@@ -50,8 +52,9 @@ class PongTest(unittest.TestCase):
             call(6, curses.COLOR_BLACK, curses.COLOR_YELLOW),
         ])
         stdscr.bkgd.assert_called_once_with(" ", 1)
-        self.assertEqual(stdscr.erase.call_count, 3)
-        self.assertEqual(stdscr.refresh.call_count, 9)
+        self.assertEqual(stdscr.erase.call_count, 4)
+        self.assertEqual(stdscr.refresh.call_count, 10)
+        stdscr.addnstr.assert_any_call(0, 0, "Calibrating computer...", 18, 5)
         self.assertIn(call(2, 2, "  ", 2), stdscr.addstr.call_args_list)
         self.assertIn(call(3, 8, "  ", 1), stdscr.addstr.call_args_list)
         stdscr.addnstr.assert_any_call(
@@ -107,6 +110,38 @@ class PongTest(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             _computer_target_y("unknown", ball, 12, 3, 8, 10)
+
+    def test_simulator_returns_computer_loss_turn_for_each_serve_direction(self) -> None:
+        loss_turns = [
+            _simulate_computer_loss_turn(20, 4, 15, 3, direction)
+            for direction in DIRECTIONS
+        ]
+
+        self.assertEqual(len(loss_turns), 4)
+        self.assertTrue(all(turn is None or turn > 0 for turn in loss_turns))
+
+    def test_simulator_detects_repeated_rally_state_as_non_loss(self) -> None:
+        with patch("main._advance_ball"):
+            self.assertIsNone(
+                _simulate_computer_loss_turn(20, 4, 15, 3, (1, 1))
+            )
+
+    def test_calibration_selects_a_valid_horizon_for_playfield(self) -> None:
+        self.assertEqual(_calibrate_hybrid_horizon(80, 3, 20), 9)
+        self.assertEqual(
+            [
+                _simulate_computer_loss_turn(80, 3, 20, 9, direction)
+                for direction in DIRECTIONS
+            ],
+            [6, 1, 10, 5],
+        )
+
+    def test_calibration_prefers_candidates_without_non_loss_runs(self) -> None:
+        with patch("main._simulate_computer_loss_turn") as simulate:
+            simulate.side_effect = lambda columns, top, bottom, horizon, direction: (
+                None if horizon == 1 else {2: 5, 3: 9}[horizon]
+            )
+            self.assertEqual(_calibrate_hybrid_horizon(8, 2, 7), 2)
 
     def test_computer_moves_one_cell_toward_predicted_row_and_stays_in_bounds(self) -> None:
         self.assertEqual(_move_computer_paddle(4, 3, 2, 9, 2), 3)
@@ -234,7 +269,8 @@ class PongTest(unittest.TestCase):
                 with patch("main.curses.curs_set", return_value=1):
                     with patch("main.time.monotonic", side_effect=[0.0, 0.15]):
                         with patch("main._advance_ball") as advance_ball:
-                            self.assertEqual(_run(stdscr), 0)
+                            with patch("main._calibrate_hybrid_horizon", return_value=3):
+                                self.assertEqual(_run(stdscr), 0)
 
         advance_ball.assert_called_once()
 
@@ -260,16 +296,26 @@ class PongTest(unittest.TestCase):
         stdscr.getmaxyx.return_value = (20, 40)
         stdscr.getch.side_effect = [-1, -1, ord("e")]
         ball = Ball(8, 10, 1, 1)
+
+        def calibrate_after_status(*args):
+            stdscr.addnstr.assert_any_call(0, 0, "Calibrating computer...", 40, 7)
+            return 3
+
         with patch("main.curses.start_color"), patch("main.curses.init_pair"):
             with patch("main.curses.color_pair", return_value=7):
                 with patch("main.curses.curs_set", return_value=1):
                     with patch("main.time.monotonic", side_effect=[0.0, 0.15, 0.30]):
                         with patch("main._new_ball", return_value=ball):
                             with patch("main._advance_ball") as advance_ball:
-                                self.assertEqual(_run(stdscr), 0)
+                                with patch(
+                                    "main._calibrate_hybrid_horizon",
+                                    side_effect=calibrate_after_status,
+                                ) as calibrate:
+                                    self.assertEqual(_run(stdscr), 0)
 
         computer_tops = [call.args[6] for call in advance_ball.call_args_list]
         self.assertEqual(computer_tops, [8, 9])
+        calibrate.assert_called_once_with(20, 3, 16)
 
     def test_runner_keeps_predictive_computer_on_two_tick_interval(self) -> None:
         stdscr = Mock()
@@ -304,7 +350,8 @@ class PongTest(unittest.TestCase):
                     with patch("main.time.monotonic", side_effect=[0.0, 0.15, 0.15]):
                         with patch("main._new_ball", side_effect=serves) as new_ball:
                             with patch("main._advance_ball", side_effect=miss_ball):
-                                self.assertEqual(_run(stdscr), 0)
+                                with patch("main._calibrate_hybrid_horizon", return_value=1):
+                                    self.assertEqual(_run(stdscr), 0)
 
         self.assertEqual(new_ball.call_count, 2)
         self.assertGreaterEqual(stdscr.addnstr.call_count, 2)

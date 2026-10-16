@@ -26,6 +26,7 @@ COMPUTER_BEHAVIOR_PREDICT_INTERCEPT = "predict_intercept"
 COMPUTER_BEHAVIOR_SHORT_HORIZON = "short_horizon"
 COMPUTER_BEHAVIOR = COMPUTER_BEHAVIOR_SHORT_HORIZON
 COMPUTER_HYBRID_HORIZON_RATIO = 0.2
+COMPUTER_TARGET_LOSS_TURNS = 5
 COMPUTER_MOVE_INTERVAL_TICKS = 2
 COMPUTER_PADDLE_STEP = 1
 
@@ -82,8 +83,10 @@ def _project_ball_y(
     return y
 
 
-def _hybrid_horizon_ticks(horizontal_grid_size: int) -> int:
-    return max(1, math.ceil(horizontal_grid_size * COMPUTER_HYBRID_HORIZON_RATIO))
+def _hybrid_horizon_ticks(
+    horizontal_grid_size: int, ratio: float = COMPUTER_HYBRID_HORIZON_RATIO
+) -> int:
+    return max(1, math.ceil(horizontal_grid_size * ratio))
 
 
 def _predict_ball_y(ball: Ball, paddle_x: int, surface_top: int, surface_bottom: int) -> int:
@@ -117,19 +120,144 @@ def _computer_target_y(
     surface_top: int,
     surface_bottom: int,
     horizontal_grid_size: int,
+    hybrid_horizon_ticks: Optional[int] = None,
 ) -> int:
     if behavior == COMPUTER_BEHAVIOR_TRACK_CURRENT_ROW:
         return ball.y
     if behavior == COMPUTER_BEHAVIOR_SHORT_HORIZON:
         return _project_ball_y(
             ball,
-            min(paddle_x - ball.x, _hybrid_horizon_ticks(horizontal_grid_size)),
+            min(
+                paddle_x - ball.x,
+                hybrid_horizon_ticks
+                if hybrid_horizon_ticks is not None
+                else _hybrid_horizon_ticks(horizontal_grid_size),
+            ),
             surface_top,
             surface_bottom,
         )
     if behavior == COMPUTER_BEHAVIOR_PREDICT_INTERCEPT:
         return _predict_ball_y(ball, paddle_x, surface_top, surface_bottom)
     raise ValueError("Unknown computer behavior: {}".format(behavior))
+
+
+def _simulate_computer_loss_turn(
+    logical_columns: int,
+    surface_top: int,
+    surface_bottom: int,
+    horizon_ticks: int,
+    direction: tuple[int, int],
+) -> Optional[int]:
+    """Return the computer's loss turn, or None if the rally enters a cycle."""
+    left_paddle_x = 2
+    right_paddle_x = logical_columns - 3
+    horizontal_grid_size = right_paddle_x - left_paddle_x
+    surface_height = surface_bottom - surface_top + 1
+    paddle_height = _paddle_height(surface_height)
+    center_top = surface_top + (surface_height - paddle_height) // 2
+    ball = Ball(
+        logical_columns // 2,
+        surface_top + (surface_height - 1) // 2,
+        direction[0],
+        direction[1],
+    )
+    computer_top = center_top
+    computer_move_ticks = 0
+    turns = 0
+    seen_states = set()
+
+    while not ball.game_over:
+        state = (
+            ball.x,
+            ball.y,
+            ball.dx,
+            ball.dy,
+            computer_top,
+            computer_move_ticks,
+        )
+        if state in seen_states:
+            return None
+        seen_states.add(state)
+
+        if ball.dx > 0:
+            if ball.x + ball.dx == right_paddle_x:
+                turns += 1
+            computer_move_ticks += 1
+            if computer_move_ticks >= COMPUTER_MOVE_INTERVAL_TICKS:
+                target_y = _computer_target_y(
+                    COMPUTER_BEHAVIOR_SHORT_HORIZON,
+                    ball,
+                    right_paddle_x,
+                    surface_top,
+                    surface_bottom,
+                    horizontal_grid_size,
+                    horizon_ticks,
+                )
+                computer_top = _move_computer_paddle(
+                    computer_top,
+                    target_y,
+                    surface_top,
+                    surface_bottom,
+                    paddle_height,
+                    COMPUTER_PADDLE_STEP,
+                )
+                computer_move_ticks = 0
+        else:
+            computer_move_ticks = 0
+
+        if ball.dx < 0:
+            next_y = _project_ball_y(ball, 1, surface_top, surface_bottom)
+            player_top = min(
+                max(next_y, surface_top), surface_bottom - paddle_height + 1
+            )
+        else:
+            player_top = center_top
+
+        _advance_ball(
+            ball,
+            surface_top,
+            surface_bottom,
+            left_paddle_x,
+            right_paddle_x,
+            player_top,
+            computer_top,
+            paddle_height,
+        )
+
+    return turns if ball.winner == "Player" else None
+
+
+def _calibrate_hybrid_horizon(
+    logical_columns: int, surface_top: int, surface_bottom: int
+) -> int:
+    """Select a horizon that targets five computer turns on this playfield."""
+    horizontal_grid_size = (logical_columns - 3) - 2
+    if horizontal_grid_size <= 1:
+        return 1
+
+    directions = DIRECTIONS
+    candidates = []
+    for horizon_ticks in range(1, horizontal_grid_size + 1):
+        loss_turns = [
+            _simulate_computer_loss_turn(
+                logical_columns,
+                surface_top,
+                surface_bottom,
+                horizon_ticks,
+                direction,
+            )
+            for direction in directions
+        ]
+        finite_turns = [turn for turn in loss_turns if turn is not None]
+        non_loss_count = len(loss_turns) - len(finite_turns)
+        average_turn = (
+            sum(finite_turns) / len(finite_turns) if finite_turns else math.inf
+        )
+        candidates.append(
+            (non_loss_count, abs(average_turn - COMPUTER_TARGET_LOSS_TURNS), horizon_ticks)
+        )
+
+    return min(candidates)[2]
 
 
 def _advance_ball(
@@ -285,6 +413,22 @@ def _run(stdscr: curses.window) -> int:
         logical_columns = columns // 2
         left_paddle_x = 2
         right_paddle_x = logical_columns - 3
+        hybrid_horizon_ticks = _hybrid_horizon_ticks(
+            right_paddle_x - left_paddle_x
+        )
+        if COMPUTER_BEHAVIOR == COMPUTER_BEHAVIOR_SHORT_HORIZON:
+            stdscr.erase()
+            stdscr.addnstr(
+                0,
+                0,
+                "Calibrating computer...",
+                columns,
+                curses.color_pair(5),
+            )
+            stdscr.refresh()
+            hybrid_horizon_ticks = _calibrate_hybrid_horizon(
+                logical_columns, surface_top, surface_bottom
+            )
         rng = random.Random()
 
         def new_ball() -> Ball:
@@ -353,6 +497,7 @@ def _run(stdscr: curses.window) -> int:
                                 surface_top,
                                 surface_bottom,
                                 right_paddle_x - left_paddle_x,
+                                hybrid_horizon_ticks,
                             )
                             computer_top = _move_computer_paddle(
                                 computer_top,
