@@ -8,7 +8,8 @@ from dataclasses import dataclass, field
 Coordinate = tuple[int, int]
 BLINK_INTERVAL = 0.5
 CONTROL_MESSAGE = "Arrows: move; H: hint; N: new maze; E: exit"
-WIN_MESSAGE = "Maze complete! Woot!"
+WIN_MESSAGE = "Maze complete! Woot! "
+WIN_EMOJI = "🎉"
 RESIZE_EXIT = 2
 DIRECTIONS = {
     curses.KEY_UP: (-1, 0),
@@ -173,6 +174,8 @@ def _draw_game(
     stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
     if state.won:
         stdscr.addnstr(rows - 1, 0, WIN_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
+        if not state.blue_phase:
+            stdscr.addnstr(rows - 1, len(WIN_MESSAGE), WIN_EMOJI, columns - len(WIN_MESSAGE), curses.color_pair(color_pairs["message"]))
     stdscr.refresh()
 
 

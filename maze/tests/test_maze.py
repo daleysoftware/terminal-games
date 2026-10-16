@@ -135,7 +135,7 @@ class MazeTest(unittest.TestCase):
         self.assertIn(call(3, 2, "  ", 2), painted)
         stdscr.addnstr.assert_any_call(0, 0, "Arrows: move   N: new maze   E: exit", 19, 7)
 
-    def test_win_renderer_shows_completion_message(self) -> None:
+    def test_win_renderer_blinks_completion_message_on_bottom_row(self) -> None:
         stdscr = Mock()
         stdscr.getmaxyx.return_value = (20, 60)
         state = GameState(["# #", "# #", "# #"], (3, 1), (-1, 1), (-1, 1), 0.0, won=True)
@@ -151,10 +151,16 @@ class MazeTest(unittest.TestCase):
         with patch("main.curses.color_pair", side_effect=lambda color: color):
             _draw_game(stdscr, state, color_pairs)
 
-        self.assertEqual(stdscr.addnstr.call_args_list[-2:], [
-            call(0, 0, "Arrows: move   N: new maze   E: exit", 60, 7),
-            call(19, 0, "Maze complete! Press E to exit", 60, 7),
-        ])
+        stdscr.addnstr.assert_any_call(19, 0, "Maze complete! Woot! ", 60, 7)
+        stdscr.addnstr.assert_any_call(19, 21, "🎉", 39, 7)
+
+        state.blue_phase = True
+        stdscr.addnstr.reset_mock()
+        with patch("main.curses.color_pair", side_effect=lambda color: color):
+            _draw_game(stdscr, state, color_pairs)
+
+        stdscr.addnstr.assert_any_call(19, 0, "Maze complete! Woot! ", 60, 7)
+        self.assertNotIn(call(19, 21, "🎉", 39, 7), stdscr.addnstr.call_args_list)
 
 
 if __name__ == "__main__":
