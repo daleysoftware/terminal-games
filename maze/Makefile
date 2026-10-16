@@ -2,7 +2,7 @@ PYTHON ?= python3
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: setup run test
+.PHONY: setup run test clean
 
 setup: $(VENV_PYTHON)
 
@@ -14,3 +14,6 @@ run: setup
 
 test: setup
 	$(VENV_PYTHON) -m unittest discover -s tests -v
+
+clean:
+	rm -rf $(VENV) __pycache__ tests/__pycache__
