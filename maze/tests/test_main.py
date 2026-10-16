@@ -69,6 +69,10 @@ class MainTest(unittest.TestCase):
                             break
 
                     self.assertEqual(process.poll(), 0)
+                    if exit_signal == signal.SIGWINCH:
+                        self.assertIn(b"Exiting because the terminal was resized.", output)
+                    else:
+                        self.assertNotIn(b"Exiting because the terminal was resized.", output)
                     self.assertIn(b"\x1b[?1049l", output)
                     self.assertNotIn(b"Traceback", output)
                     restored_settings = termios.tcgetattr(slave)

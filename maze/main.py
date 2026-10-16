@@ -9,6 +9,7 @@ Coordinate = tuple[int, int]
 BLINK_INTERVAL = 0.5
 CONTROL_MESSAGE = "Arrows: move; H: hint; N: new maze; E: exit"
 WIN_MESSAGE = "Maze complete! Woot!"
+RESIZE_EXIT = 2
 DIRECTIONS = {
     curses.KEY_UP: (-1, 0),
     curses.KEY_DOWN: (1, 0),
@@ -288,7 +289,7 @@ def _run(stdscr: curses.window) -> int:
         while True:
             key = stdscr.getch()
             if key == curses.KEY_RESIZE:
-                return 0
+                return RESIZE_EXIT
             if key in (ord("e"), ord("E")):
                 return 0
             if key in (ord("n"), ord("N")):
@@ -319,6 +320,9 @@ def main() -> int:
     except KeyboardInterrupt:
         return 0
 
+    if result == RESIZE_EXIT:
+        print("Exiting because the terminal was resized.", file=sys.stderr)
+        return 0
     if result:
         print("Terminal must be at least 9 rows and 10 columns.", file=sys.stderr)
     return result
