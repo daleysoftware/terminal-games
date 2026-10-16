@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 Coordinate = tuple[int, int]
 BLINK_INTERVAL = 0.5
-CONTROL_MESSAGE = "Arrows: move; N: new maze; E: exit"
+CONTROL_MESSAGE = "Arrows: move; H: hint; N: new maze; E: exit"
 WIN_MESSAGE = "Maze complete! Woot!"
 DIRECTIONS = {
     curses.KEY_UP: (-1, 0),
@@ -70,6 +70,7 @@ class GameState:
     blue_phase: bool = False
     won: bool = False
     visit_counts: dict[Coordinate, int] = field(default_factory=dict)
+    hint_visible: bool = False
 
     @property
     def height(self) -> int:
@@ -133,6 +134,7 @@ def _draw_game(
     color_pairs: dict[str, int],
 ) -> None:
     stdscr.erase()
+    solution_path = _solution_path(state) if state.hint_visible else set()
     for row, line in enumerate(state.maze, start=3):
         for column, tile in enumerate(line):
             logical_cell = (row - 3, column)
@@ -142,6 +144,8 @@ def _draw_game(
                 pair = color_pairs[
                     "yellow" if state.visit_counts.get(logical_cell, 1) >= 2 else "orange"
                 ]
+            elif logical_cell in solution_path:
+                pair = color_pairs["light_blue"]
             else:
                 continue
             stdscr.addstr(row, 2 + column * 2, "  ", curses.color_pair(pair))
@@ -203,6 +207,8 @@ def _initialize_colors() -> dict[str, int]:
     curses.init_pair(6, curses.COLOR_BLACK, blue)
     curses.init_pair(7, curses.COLOR_WHITE, curses.COLOR_BLACK)
     curses.init_pair(8, curses.COLOR_BLACK, yellow)
+    light_blue = 117 if has_256_colors else curses.COLOR_CYAN
+    curses.init_pair(9, curses.COLOR_BLACK, light_blue)
     return {
         "passage": 1,
         "wall": 2,
@@ -212,7 +218,40 @@ def _initialize_colors() -> dict[str, int]:
         "blue": 6,
         "message": 7,
         "yellow": 8,
+        "light_blue": 9,
     }
+
+
+def _solution_path(state: GameState) -> set[Coordinate]:
+    start = (state.height - 1, state.start[1])
+    end = (0, state.end[1])
+    pending = [start]
+    previous: dict[Coordinate, Coordinate | None] = {start: None}
+
+    while pending:
+        cell = pending.pop(0)
+        if cell == end:
+            break
+        for direction in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            neighbor = (cell[0] + direction[0], cell[1] + direction[1])
+            if (
+                0 <= neighbor[0] < state.height
+                and 0 <= neighbor[1] < state.width
+                and state.maze[neighbor[0]][neighbor[1]] == " "
+                and neighbor not in previous
+            ):
+                previous[neighbor] = cell
+                pending.append(neighbor)
+
+    if end not in previous:
+        return set()
+
+    path = set()
+    cell: Coordinate | None = end
+    while cell is not None:
+        path.add(cell)
+        cell = previous[cell]
+    return path
 
 
 def _run(stdscr: curses.window) -> int:
@@ -254,6 +293,9 @@ def _run(stdscr: curses.window) -> int:
                 return 0
             if key in (ord("n"), ord("N")):
                 state = new_game()
+                should_draw = True
+            elif key in (ord("h"), ord("H")):
+                state.hint_visible = not state.hint_visible
                 should_draw = True
             else:
                 now = time.monotonic()
