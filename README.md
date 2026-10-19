@@ -10,7 +10,7 @@
 
 ## Snake
 
-Todo
+<img src="images/snake.png"/>
 
 ## Tetris
 
