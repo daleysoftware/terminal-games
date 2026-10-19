@@ -2,15 +2,15 @@
 
 ## Maze
 
-<img src="images/maze.png"/>
+<img src="images/maze-screenshot.png"/>
 
 ## Pong
 
-<img src="images/pong.png"/>
+<img src="images/pong-screenshot.png"/>
 
 ## Snake
 
-<img src="images/snake-v2.png"/>
+<img src="images/snake-screenshot.png"/>
 
 ## Tetris
 
