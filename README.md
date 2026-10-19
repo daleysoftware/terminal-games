@@ -10,7 +10,7 @@
 
 ## Snake
 
-<img src="images/snake.png"/>
+<img src="images/snake-v2.png"/>
 
 ## Tetris
 
