@@ -9,7 +9,7 @@ SIZE_EXIT = 1
 MIN_ROWS = 30
 MIN_COLUMNS = 54
 SIZE_MESSAGE = "Terminal must be at least 30 rows and 54 columns."
-CONTROL_MESSAGE = "E: exit  R: rotate  ←/→: move  ↓: drop"
+CONTROL_MESSAGE = "E: exit  N: new  R: rotate  ←/→: move  ↓: drop"
 INNER_WIDTH = 21
 INNER_HEIGHT = 22
 BOARD_WIDTH = 10
@@ -319,6 +319,14 @@ def _run(stdscr: curses.window) -> int:
                 return RESIZE_EXIT
             if key in (ord("e"), ord("E")):
                 return 0
+            if key in (ord("n"), ord("N")):
+                locked = {}
+                active = _new_piece(*random.choice(tuple(TETROMINO_SHAPES.items())))
+                next_piece = random.choice(tuple(TETROMINO_SHAPES.items()))
+                game_over = False
+                score = 0
+                next_gravity = time.monotonic() + GRAVITY_INTERVAL
+                continue
 
             if game_over:
                 continue
