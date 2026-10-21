@@ -2,19 +2,19 @@
 
 ## Maze
 
-<img src="images/maze-screenshot.png"/>
+<img src="images/maze.png"/>
 
 ## Pong
 
-<img src="images/pong-screenshot.png"/>
+<img src="images/pong.png"/>
 
 ## Snake
 
-<img src="images/snake-screenshot.png"/>
+<img src="images/snake.png"/>
 
 ## Tetris
 
-<img src="images/tetris-screenshot.png"/>
+<img src="images/tetris.png"/>
 
 ## Run and Test
 
