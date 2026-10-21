@@ -1,13 +1,13 @@
 import curses
 import math
 import random
-import sys
 import time
 from dataclasses import dataclass
 from typing import Optional
+from terminal_games.runtime import RESIZE_EXIT, run_game
+from terminal_games.rendering import draw_cell, draw_rectangle
 
 
-RESIZE_EXIT = 2
 SIZE_EXIT = 1
 MIN_ROWS = 8
 MIN_COLUMNS = 14
@@ -321,13 +321,9 @@ def _draw_grid(
     middle = logical_columns // 2
 
     stdscr.erase()
-    for logical_column in range(left, right + 1):
-        stdscr.addstr(top, logical_column * 2, "  ", curses.color_pair(white_pair))
-        stdscr.addstr(bottom, logical_column * 2, "  ", curses.color_pair(white_pair))
+    draw_rectangle(stdscr, left, top, right, bottom, curses.color_pair(white_pair))
     for row in range(top + 1, bottom):
-        stdscr.addstr(row, left * 2, "  ", curses.color_pair(white_pair))
-        stdscr.addstr(row, right * 2, "  ", curses.color_pair(white_pair))
-        stdscr.addstr(row, middle * 2, "  ", curses.color_pair(1))
+        draw_cell(stdscr, row, middle, curses.color_pair(1))
     stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(message_pair))
     stdscr.refresh()
 
@@ -345,8 +341,8 @@ def _draw_players(
     left = 2
     right = logical_columns - 3
     for offset in range(height):
-        stdscr.addstr(player_top + offset, left * 2, "  ", curses.color_pair(blue_pair))
-        stdscr.addstr(computer_top + offset, right * 2, "  ", curses.color_pair(red_pair))
+        draw_cell(stdscr, player_top + offset, left, curses.color_pair(blue_pair))
+        draw_cell(stdscr, computer_top + offset, right, curses.color_pair(red_pair))
     stdscr.refresh()
 
 
@@ -359,7 +355,7 @@ def _draw_ball(
     message_pair: int,
 ) -> None:
     if ball.flash_visible:
-        stdscr.addstr(ball.y, ball.x * 2, "  ", curses.color_pair(yellow_pair))
+        draw_cell(stdscr, ball.y, ball.x, curses.color_pair(yellow_pair))
     if ball.game_over:
         message = PLAYER_WIN_MESSAGE if ball.winner == "Player" else COMPUTER_WIN_MESSAGE
         stdscr.addnstr(
@@ -529,21 +525,7 @@ def _run(stdscr: curses.window) -> int:
 
 
 def main() -> int:
-    if not (sys.stdin.isatty() and sys.stdout.isatty()):
-        return 0
-
-    try:
-        result = curses.wrapper(_run)
-    except KeyboardInterrupt:
-        return 0
-
-    if result == RESIZE_EXIT:
-        print("Exiting because the terminal was resized.", file=sys.stderr)
-        return 0
-    if result == SIZE_EXIT:
-        print(SIZE_MESSAGE, file=sys.stderr)
-        return SIZE_EXIT
-    return result
+    return run_game(_run, SIZE_MESSAGE, SIZE_EXIT)
 
 
 if __name__ == "__main__":

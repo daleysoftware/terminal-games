@@ -1,8 +1,9 @@
 PYTHON ?= python3
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
+export PYTHONPATH := $(abspath ../../lib):$(PYTHONPATH)
 
-.DEFAULT_GOAL := run
+.DEFAULT_GOAL := test
 
 .PHONY: setup run test clean
 
@@ -18,4 +19,4 @@ test: setup
 	$(VENV_PYTHON) -m unittest discover -s tests -v
 
 clean:
-	rm -rf $(VENV) __pycache__ tests/__pycache__
+	rm -rf $(VENV) __pycache__

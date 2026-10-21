@@ -1,10 +1,10 @@
 import curses
 import random
-import sys
 import time
+from terminal_games.runtime import RESIZE_EXIT, run_game
+from terminal_games.rendering import draw_cell, draw_rectangle
 
 
-RESIZE_EXIT = 2
 SIZE_EXIT = 1
 MIN_ROWS = 30
 MIN_COLUMNS = 54
@@ -49,23 +49,6 @@ def _layout(rows: int, columns: int) -> tuple[int, int, int, int, int]:
     return inner_left, inner_top, divider_column, inner_top + 11, right
 
 
-def _draw_rectangle(
-    stdscr: curses.window,
-    left: int,
-    top: int,
-    right: int,
-    bottom: int,
-    white_pair: int,
-) -> None:
-    white = curses.color_pair(white_pair)
-    for column in range(left, right + 1):
-        stdscr.addstr(top, column * 2, "  ", white)
-        stdscr.addstr(bottom, column * 2, "  ", white)
-    for row in range(top + 1, bottom):
-        stdscr.addstr(row, left * 2, "  ", white)
-        stdscr.addstr(row, right * 2, "  ", white)
-
-
 def _draw_piece(
     stdscr: curses.window,
     piece: tuple[str, tuple[tuple[int, int], ...], int, int],
@@ -76,10 +59,10 @@ def _draw_piece(
     _, cells, piece_row, piece_column = piece
     color = curses.color_pair(color_pair)
     for row, column in cells:
-        stdscr.addstr(
+        draw_cell(
+            stdscr,
             board_top + piece_row + row,
-            (board_left + piece_column + column) * 2,
-            "  ",
+            board_left + piece_column + column,
             color,
         )
 
@@ -106,7 +89,7 @@ def _draw_next_piece(
     color = curses.color_pair(TETROMINO_COLOR_PAIRS[piece_name])
 
     for row, column in cells:
-        stdscr.addstr(piece_top + row, (piece_left + column) * 2, "  ", color)
+        draw_cell(stdscr, piece_top + row, piece_left + column, color)
 
 
 def _draw_grid(
@@ -132,18 +115,14 @@ def _draw_grid(
     panel_left = divider_column + 1
 
     stdscr.erase()
-    _draw_rectangle(stdscr, 1, 2, columns // 2 - 2, rows - 3, white_pair)
-    _draw_rectangle(stdscr, inner_left, inner_top, inner_right, inner_bottom, white_pair)
+    white = curses.color_pair(white_pair)
+    draw_rectangle(stdscr, 1, 2, columns // 2 - 2, rows - 3, white)
+    draw_rectangle(stdscr, inner_left, inner_top, inner_right, inner_bottom, white)
 
     for row in range(inner_top + 1, inner_bottom):
-        stdscr.addstr(row, divider_column * 2, "  ", curses.color_pair(white_pair))
+        draw_cell(stdscr, row, divider_column, curses.color_pair(white_pair))
     for column in range(panel_left, inner_right):
-        stdscr.addstr(
-            panel_divider_row,
-            column * 2,
-            "  ",
-            curses.color_pair(white_pair),
-        )
+        draw_cell(stdscr, panel_divider_row, column, curses.color_pair(white_pair))
 
     stdscr.addnstr(
         inner_top + 2,
@@ -172,7 +151,7 @@ def _draw_grid(
             color = curses.color_pair(2) if flash_white else _gray_color()
         else:
             color = _gray_color()
-        stdscr.addstr(board_top + row, (board_left + column) * 2, "  ", color)
+        draw_cell(stdscr, board_top + row, board_left + column, color)
     if not game_over and draw_active:
         _draw_piece(
             stdscr,
@@ -385,21 +364,7 @@ def _run(stdscr: curses.window) -> int:
 
 
 def main() -> int:
-    if not (sys.stdin.isatty() and sys.stdout.isatty()):
-        return 0
-
-    try:
-        result = curses.wrapper(_run)
-    except KeyboardInterrupt:
-        return 0
-
-    if result == RESIZE_EXIT:
-        print("Exiting because the terminal was resized.", file=sys.stderr)
-        return 0
-    if result == SIZE_EXIT:
-        print(SIZE_MESSAGE, file=sys.stderr)
-        return SIZE_EXIT
-    return result
+    return run_game(_run, SIZE_MESSAGE, SIZE_EXIT)
 
 
 if __name__ == "__main__":

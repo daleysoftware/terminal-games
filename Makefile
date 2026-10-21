@@ -1,11 +1,9 @@
-GAME_DIRS := $(patsubst %/Makefile,%,$(wildcard */Makefile))
-GAME_TEST_TARGETS := $(GAME_DIRS:%=test-%)
+GAMES_DIR := games
 
 .DEFAULT_GOAL := test
 
-.PHONY: test $(GAME_TEST_TARGETS)
+.PHONY: test
 
-test: $(GAME_TEST_TARGETS)
-
-$(GAME_TEST_TARGETS):
-	$(MAKE) -C $(patsubst test-%,%,$@) test
+test:
+	$(MAKE) -C lib test
+	$(MAKE) -C $(GAMES_DIR) test

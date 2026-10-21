@@ -2,16 +2,23 @@
 
 ## Maze
 
-<img src="_images/maze-screenshot.png"/>
+<img src="images/maze-screenshot.png"/>
 
 ## Pong
 
-<img src="_images/pong-screenshot.png"/>
+<img src="images/pong-screenshot.png"/>
 
 ## Snake
 
-<img src="_images/snake-screenshot.png"/>
+<img src="images/snake-screenshot.png"/>
 
 ## Tetris
 
-<img src="_images/tetris-screenshot.png"/>
+<img src="images/tetris-screenshot.png"/>
+
+## Run and Test
+
+Run `make` or `make test` at the repository root to run library and game tests.
+Run `make` or `make test` in `lib/` for shared-library tests, or in `games/` for
+game tests. Each game folder defaults to its tests; use `make run` there to
+start that game.

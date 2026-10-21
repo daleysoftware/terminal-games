@@ -1,8 +1,9 @@
 PYTHON ?= python3
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
+export PYTHONPATH := $(abspath ../../lib):$(PYTHONPATH)
 
-.DEFAULT_GOAL := run
+.DEFAULT_GOAL := test
 
 .PHONY: setup run test clean
 

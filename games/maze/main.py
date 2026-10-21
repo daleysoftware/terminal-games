@@ -1,8 +1,9 @@
 import curses
 import random
-import sys
 import time
 from dataclasses import dataclass, field
+from terminal_games.runtime import RESIZE_EXIT, run_game
+from terminal_games.rendering import draw_cell
 
 
 Coordinate = tuple[int, int]
@@ -10,7 +11,6 @@ BLINK_INTERVAL = 0.5
 CONTROL_MESSAGE = "Arrows: move; H: hint; N: new maze; E: exit"
 WIN_MESSAGE = "Maze complete! Woot! "
 WIN_EMOJI = "🎉"
-RESIZE_EXIT = 2
 DIRECTIONS = {
     curses.KEY_UP: (-1, 0),
     curses.KEY_DOWN: (1, 0),
@@ -150,26 +150,31 @@ def _draw_game(
                 pair = color_pairs["light_blue"]
             else:
                 continue
-            stdscr.addstr(row, 2 + column * 2, "  ", curses.color_pair(pair))
+            draw_cell(stdscr, row, column + 1, curses.color_pair(pair))
 
     start_row, start_column = state.start
     end_row, end_column = state.end
-    stdscr.addstr(
+    draw_cell(
+        stdscr,
         start_row + 3,
-        2 + start_column * 2,
-        "  ",
+        start_column + 1,
         curses.color_pair(color_pairs["green"]),
     )
-    stdscr.addstr(
+    draw_cell(
+        stdscr,
         end_row + 3,
-        2 + end_column * 2,
-        "  ",
+        end_column + 1,
         curses.color_pair(color_pairs["red"]),
     )
 
     player_pair = _player_color(state, color_pairs)
     player_row, player_column = state.position
-    stdscr.addstr(player_row + 3, 2 + player_column * 2, "  ", curses.color_pair(player_pair))
+    draw_cell(
+        stdscr,
+        player_row + 3,
+        player_column + 1,
+        curses.color_pair(player_pair),
+    )
     rows, columns = stdscr.getmaxyx()
     stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
     if state.won:
@@ -315,20 +320,7 @@ def _run(stdscr: curses.window) -> int:
 
 
 def main() -> int:
-    if not (sys.stdin.isatty() and sys.stdout.isatty()):
-        return 0
-
-    try:
-        result = curses.wrapper(_run)
-    except KeyboardInterrupt:
-        return 0
-
-    if result == RESIZE_EXIT:
-        print("Exiting because the terminal was resized.", file=sys.stderr)
-        return 0
-    if result:
-        print("Terminal must be at least 9 rows and 10 columns.", file=sys.stderr)
-    return result
+    return run_game(_run, "Terminal must be at least 9 rows and 10 columns.")
 
 
 if __name__ == "__main__":

@@ -1,11 +1,11 @@
 import curses
 import random
-import sys
 import time
 from typing import Optional
+from terminal_games.runtime import RESIZE_EXIT, run_game
+from terminal_games.rendering import draw_cell, draw_rectangle
 
 
-RESIZE_EXIT = 2
 SIZE_EXIT = 1
 MIN_ROWS = 8
 MIN_COLUMNS = 18
@@ -39,19 +39,14 @@ def _draw_screen(
     top = 2
     bottom = rows - 3
     stdscr.erase()
-    for logical_column in range(left, right + 1):
-        stdscr.addstr(top, logical_column * 2, "  ", curses.color_pair(2))
-        stdscr.addstr(bottom, logical_column * 2, "  ", curses.color_pair(2))
-    for row in range(top + 1, bottom):
-        stdscr.addstr(row, left * 2, "  ", curses.color_pair(2))
-        stdscr.addstr(row, right * 2, "  ", curses.color_pair(2))
+    draw_rectangle(stdscr, left, top, right, bottom, curses.color_pair(2))
     for row, column in snake[1:]:
-        stdscr.addstr(row, column * 2, "  ", curses.color_pair(4))
+        draw_cell(stdscr, row, column, curses.color_pair(4))
     head_row, head_column = snake[0]
-    stdscr.addstr(head_row, head_column * 2, "  ", curses.color_pair(3))
+    draw_cell(stdscr, head_row, head_column, curses.color_pair(3))
     if apple is not None:
         apple_row, apple_column = apple
-        stdscr.addstr(apple_row, apple_column * 2, "  ", curses.color_pair(6))
+        draw_cell(stdscr, apple_row, apple_column, curses.color_pair(6))
     stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(5))
     if game_over:
         message = WIN_MESSAGE if won else GAME_OVER_MESSAGE
@@ -197,21 +192,7 @@ def _run(stdscr: curses.window) -> int:
 
 
 def main() -> int:
-    if not (sys.stdin.isatty() and sys.stdout.isatty()):
-        return 0
-
-    try:
-        result = curses.wrapper(_run)
-    except KeyboardInterrupt:
-        return 0
-
-    if result == RESIZE_EXIT:
-        print("Exiting because the terminal was resized.", file=sys.stderr)
-        return 0
-    if result == SIZE_EXIT:
-        print(SIZE_MESSAGE, file=sys.stderr)
-        return SIZE_EXIT
-    return result
+    return run_game(_run, SIZE_MESSAGE, SIZE_EXIT)
 
 
 if __name__ == "__main__":
