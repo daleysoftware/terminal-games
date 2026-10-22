@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import curses
+import random
 import time
 
 from terminal_games.controls import draw_control_message
@@ -158,7 +159,7 @@ def _run(stdscr: curses.window) -> int:
     gray_color = 244 if getattr(curses, "COLORS", 0) >= 256 else curses.COLOR_WHITE
     curses.init_pair(6, gray_color, curses.COLOR_BLACK)
     board = _new_board()
-    player_index = 0
+    player_index = random.choice((0, 1))
     cursor = (0, 0)
     winner = None
     draw = False
@@ -194,7 +195,7 @@ def _run(stdscr: curses.window) -> int:
             return 0
         if key in (ord("n"), ord("N")):
             board = _new_board()
-            player_index = 0
+            player_index = random.choice((0, 1))
             cursor = (0, 0)
             winner = None
             draw = False

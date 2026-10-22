@@ -140,7 +140,9 @@ class TicTacToeTest(unittest.TestCase):
 
         with patch("main._draw_screen") as draw_screen, patch(
             "main.curses.start_color"
-        ), patch("main.curses.init_pair"), patch("main.time.monotonic", return_value=1):
+        ), patch("main.curses.init_pair"), patch(
+            "main.time.monotonic", return_value=1
+        ), patch("main.random.choice", return_value=0):
             self.assertEqual(_run(window), 0)
 
         win_frame = next(
@@ -159,7 +161,7 @@ class TicTacToeTest(unittest.TestCase):
 
         with patch("main._draw_screen") as draw_screen, patch(
             "main.curses.start_color"
-        ), patch("main.curses.init_pair"):
+        ), patch("main.curses.init_pair"), patch("main.random.choice", return_value=0):
             self.assertEqual(_run(window), 0)
 
         self.assertEqual(draw_screen.call_args_list[1].args[3][0][0], "X")
@@ -174,9 +176,12 @@ class TicTacToeTest(unittest.TestCase):
 
         with patch("main._draw_screen") as draw_screen, patch(
             "main.curses.start_color"
-        ), patch("main.curses.init_pair"):
+        ), patch("main.curses.init_pair"), patch(
+            "main.random.choice", side_effect=[1, 0]
+        ):
             self.assertEqual(_run(window), 0)
 
+        self.assertEqual(draw_screen.call_args_list[0].args[4], "O")
         restarted = draw_screen.call_args_list[2]
         self.assertEqual(restarted.args[3], _new_board())
         self.assertEqual(restarted.args[4], "X")
