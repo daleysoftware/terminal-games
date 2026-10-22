@@ -26,3 +26,7 @@ start that game.
 ## Connect Four
 
 <img src="images/connect4.png"/>
+
+## Tic-Tac-Toe
+
+<img src="images/tictactoe.png"/>

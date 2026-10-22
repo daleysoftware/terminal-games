@@ -20,7 +20,6 @@ CELL_HEIGHT = 2
 BOARD_WIDTH = BOARD_COLUMNS * CELL_WIDTH + BOARD_COLUMNS + 1
 BOARD_HEIGHT = BOARD_ROWS * CELL_HEIGHT + BOARD_ROWS + 1
 DROP_INTERVAL_MS = 300
-SELECTOR_FLASH_INTERVAL_MS = 750
 WIN_FLASH_INTERVAL_MS = 500
 LANDING_FLASHES = 2
 EMPTY = None
@@ -281,8 +280,6 @@ def _run(stdscr: curses.window) -> int:
         board = _empty_board()
         current_team = random.choice((RED, BLUE))
         selected_column = 0
-        selector_visible = True
-        next_selector_toggle = time.monotonic() + SELECTOR_FLASH_INTERVAL_MS / 1000
         winner = None
         winning_cells = None
         flash_winning_cells = True
@@ -293,9 +290,6 @@ def _run(stdscr: curses.window) -> int:
             if rows < MIN_ROWS or columns < MIN_COLUMNS:
                 return SIZE_EXIT
             now = time.monotonic()
-            if now >= next_selector_toggle:
-                selector_visible = not selector_visible
-                next_selector_toggle = now + SELECTOR_FLASH_INTERVAL_MS / 1000
             if winner is not None and now >= next_winner_toggle:
                 flash_winning_cells = not flash_winning_cells
                 next_winner_toggle = now + WIN_FLASH_INTERVAL_MS / 1000
@@ -306,7 +300,6 @@ def _run(stdscr: curses.window) -> int:
                 board,
                 current_team,
                 selected_column,
-                show_selector=selector_visible,
                 winning_cells=winning_cells,
                 flash_winning_cells=flash_winning_cells if winner is not None else False,
                 winner=winner,
@@ -321,11 +314,9 @@ def _run(stdscr: curses.window) -> int:
                 board = _empty_board()
                 current_team = random.choice((RED, BLUE))
                 selected_column = 0
-                selector_visible = True
                 winner = None
                 winning_cells = None
                 flash_winning_cells = True
-                next_selector_toggle = time.monotonic() + SELECTOR_FLASH_INTERVAL_MS / 1000
                 next_winner_toggle = None
                 continue
             if winner is not None:
