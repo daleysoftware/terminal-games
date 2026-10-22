@@ -57,9 +57,8 @@ class PongTest(unittest.TestCase):
         stdscr.addnstr.assert_any_call(0, 0, "Calibrating computer...", 18, 5)
         self.assertIn(call(2, 2, "  ", 2), stdscr.addstr.call_args_list)
         self.assertIn(call(3, 8, "  ", 1), stdscr.addstr.call_args_list)
-        stdscr.addnstr.assert_any_call(
-            0, 0, "Arrows: move; N: new game; E: exit", 18, 5
-        )
+        stdscr.addnstr.assert_any_call(0, 0, "↑/↓ move; N new", 18, 5)
+        stdscr.addnstr.assert_any_call(1, 0, "E exit", 18, 5)
         self.assertIn(call(3, 4, "  ", 3), stdscr.addstr.call_args_list)
         self.assertIn(call(4, 4, "  ", 3), stdscr.addstr.call_args_list)
         self.assertIn(call(3, 12, "  ", 4), stdscr.addstr.call_args_list)

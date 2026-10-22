@@ -5,7 +5,6 @@ from collections import deque
 from unittest.mock import Mock, call, patch
 
 from main import (
-    CONTROL_MESSAGE,
     GameState,
     RESIZE_EXIT,
     _draw_game,
@@ -135,7 +134,8 @@ class MazeTest(unittest.TestCase):
         self.assertIn(call(2, 4, "  ", 4), painted)
         self.assertIn(call(6, 12, "  ", 3), painted)
         self.assertIn(call(3, 2, "  ", 2), painted)
-        stdscr.addnstr.assert_any_call(0, 0, CONTROL_MESSAGE, 19, 7)
+        stdscr.addnstr.assert_any_call(0, 0, "↑↓←→ move; H hint", 19, 7)
+        stdscr.addnstr.assert_any_call(1, 0, "N new; E exit", 19, 7)
 
     def test_win_renderer_blinks_completion_message_on_bottom_row(self) -> None:
         stdscr = Mock()

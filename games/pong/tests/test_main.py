@@ -88,7 +88,8 @@ class MainTest(unittest.TestCase):
                     self.assertIn(b"\x1b[44m", output)
                     self.assertIn(b"\x1b[41m", output)
                     self.assertIn(b"\x1b[43m", output)
-                    self.assertIn(b"Arrows: move; N: new game; E: exit", output)
+                    self.assertIn(b"N new", output)
+                    self.assertIn(b"E exit", output)
 
                     if exit_signal is None:
                         os.write(master, b"n")

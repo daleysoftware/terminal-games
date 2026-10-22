@@ -1,6 +1,7 @@
 import curses
 import random
 import time
+from terminal_games.controls import draw_control_message
 from terminal_games.runtime import RESIZE_EXIT, run_game
 from terminal_games.rendering import draw_cell, draw_rectangle
 
@@ -9,7 +10,7 @@ SIZE_EXIT = 1
 MIN_ROWS = 30
 MIN_COLUMNS = 54
 SIZE_MESSAGE = "Terminal must be at least 30 rows and 54 columns."
-CONTROL_MESSAGE = "E exit N new R rotate ←/→ move ↓ drop SPACE pause"
+CONTROL_MESSAGE = "←/→ move; ↓ drop; R rotate; Space pause; N new; E exit"
 INNER_WIDTH = 21
 INNER_HEIGHT = 22
 BOARD_WIDTH = 10
@@ -175,7 +176,9 @@ def _draw_grid(
         message_row = board_top + BOARD_HEIGHT // 2
         message_column = board_left * 2 + (BOARD_WIDTH * 2 - len(message)) // 2
         stdscr.addstr(message_row, message_column, message, curses.color_pair(message_pair))
-    stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(message_pair))
+    draw_control_message(
+        stdscr, CONTROL_MESSAGE, columns, curses.color_pair(message_pair)
+    )
     stdscr.refresh()
 
 

@@ -2,13 +2,14 @@ import curses
 import random
 import time
 from dataclasses import dataclass, field
+from terminal_games.controls import draw_control_message, wrap_control_message
 from terminal_games.runtime import RESIZE_EXIT, run_game
 from terminal_games.rendering import draw_cell
 
 
 Coordinate = tuple[int, int]
 BLINK_INTERVAL = 0.5
-CONTROL_MESSAGE = "Arrows: move; H: hint; N: new maze; E: exit"
+CONTROL_MESSAGE = "↑↓←→ move; H hint; N new; E exit"
 WIN_MESSAGE = "Maze complete! Woot! "
 WIN_EMOJI = "🎉"
 DIRECTIONS = {
@@ -134,12 +135,13 @@ def _draw_game(
     stdscr: curses.window,
     state: GameState,
     color_pairs: dict[str, int],
+    maze_top: int = 3,
 ) -> None:
     stdscr.erase()
     solution_path = _solution_path(state) if state.hint_visible else set()
-    for row, line in enumerate(state.maze, start=3):
+    for row, line in enumerate(state.maze, start=maze_top):
         for column, tile in enumerate(line):
-            logical_cell = (row - 3, column)
+            logical_cell = (row - maze_top, column)
             if tile == "#":
                 pair = color_pairs["wall"]
             elif logical_cell in state.visited:
@@ -156,13 +158,13 @@ def _draw_game(
     end_row, end_column = state.end
     draw_cell(
         stdscr,
-        start_row + 3,
+        start_row + maze_top,
         start_column + 1,
         curses.color_pair(color_pairs["green"]),
     )
     draw_cell(
         stdscr,
-        end_row + 3,
+        end_row + maze_top,
         end_column + 1,
         curses.color_pair(color_pairs["red"]),
     )
@@ -171,12 +173,14 @@ def _draw_game(
     player_row, player_column = state.position
     draw_cell(
         stdscr,
-        player_row + 3,
+        player_row + maze_top,
         player_column + 1,
         curses.color_pair(player_pair),
     )
     rows, columns = stdscr.getmaxyx()
-    stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
+    draw_control_message(
+        stdscr, CONTROL_MESSAGE, columns, curses.color_pair(color_pairs["message"])
+    )
     if state.won:
         stdscr.addnstr(rows - 1, 0, WIN_MESSAGE, columns, curses.color_pair(color_pairs["message"]))
         if not state.blue_phase:
@@ -265,7 +269,9 @@ def _solution_path(state: GameState) -> set[Coordinate]:
 
 def _run(stdscr: curses.window) -> int:
     rows, columns = stdscr.getmaxyx()
-    if rows < 9 or columns < 10:
+    control_rows = len(wrap_control_message(CONTROL_MESSAGE, columns))
+    maze_top = max(3, control_rows + 1)
+    if rows < maze_top + 6 or columns < 10:
         return 1
 
     try:
@@ -277,7 +283,7 @@ def _run(stdscr: curses.window) -> int:
         color_pairs = _initialize_colors()
         stdscr.bkgd(" ", curses.color_pair(1))
         maze_width = (columns - 4) // 2
-        maze_height = rows - 6
+        maze_height = rows - maze_top - 3
 
         def new_game() -> GameState:
             maze, start, end = generate_maze(maze_height, maze_width, random.Random())
@@ -292,7 +298,7 @@ def _run(stdscr: curses.window) -> int:
 
         state = new_game()
         stdscr.timeout(50)
-        _draw_game(stdscr, state, color_pairs)
+        _draw_game(stdscr, state, color_pairs, maze_top)
 
         while True:
             key = stdscr.getch()
@@ -313,14 +319,14 @@ def _run(stdscr: curses.window) -> int:
                 if direction is not None and state.move(direction):
                     should_draw = True
             if should_draw:
-                _draw_game(stdscr, state, color_pairs)
+                _draw_game(stdscr, state, color_pairs, maze_top)
     finally:
         if cursor_visibility is not None:
             curses.curs_set(cursor_visibility)
 
 
 def main() -> int:
-    return run_game(_run, "Terminal must be at least 9 rows and 10 columns.")
+    return run_game(_run, "Terminal is too small for the maze and its controls.")
 
 
 if __name__ == "__main__":

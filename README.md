@@ -16,6 +16,10 @@
 
 <img src="images/tetris.png"/>
 
+## Connect Four
+
+<img src="images/connect4.png"/>
+
 ## Run and Test
 
 Run `make` or `make test` at the repository root to run library and game tests.

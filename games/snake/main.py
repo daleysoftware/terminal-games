@@ -2,6 +2,7 @@ import curses
 import random
 import time
 from typing import Optional
+from terminal_games.controls import draw_control_message, wrap_control_message
 from terminal_games.runtime import RESIZE_EXIT, run_game
 from terminal_games.rendering import draw_cell, draw_rectangle
 
@@ -10,7 +11,7 @@ SIZE_EXIT = 1
 MIN_ROWS = 8
 MIN_COLUMNS = 18
 SIZE_MESSAGE = "Terminal must be at least 8 rows and 18 columns."
-CONTROL_MESSAGE = "Arrows: change direction; N: new game; E: exit"
+CONTROL_MESSAGE = "Arrows turn; N new; E exit"
 SCORE_MESSAGE = "Score: {}"
 GAME_OVER_MESSAGE = "Game over: {}"
 WIN_MESSAGE = "You win: {}"
@@ -36,7 +37,7 @@ def _draw_screen(
     logical_columns = columns // 2
     left = 1
     right = logical_columns - 2
-    top = 2
+    top = _playfield_top(columns)
     bottom = rows - 3
     stdscr.erase()
     draw_rectangle(stdscr, left, top, right, bottom, curses.color_pair(2))
@@ -47,7 +48,7 @@ def _draw_screen(
     if apple is not None:
         apple_row, apple_column = apple
         draw_cell(stdscr, apple_row, apple_column, curses.color_pair(6))
-    stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(5))
+    draw_control_message(stdscr, CONTROL_MESSAGE, columns, curses.color_pair(5))
     if game_over:
         message = WIN_MESSAGE if won else GAME_OVER_MESSAGE
     else:
@@ -69,11 +70,15 @@ def _play_sound() -> None:
         pass
 
 
+def _playfield_top(columns: int) -> int:
+    return max(2, len(wrap_control_message(CONTROL_MESSAGE, columns)))
+
+
 def _new_snake(rows: int, columns: int) -> list[tuple[int, int]]:
     logical_columns = columns // 2
     left = 1
     right = logical_columns - 2
-    top = 2
+    top = _playfield_top(columns)
     bottom = rows - 3
     head_column = ((left + 1) + (right - 1)) // 2
     head_row = ((top + 1) + (bottom - 1)) // 2
@@ -93,7 +98,7 @@ def _new_apple(
     logical_columns = columns // 2
     left = 1
     right = logical_columns - 2
-    top = 2
+    top = _playfield_top(columns)
     bottom = rows - 3
     empty_cells = [
         (row, column)
@@ -126,7 +131,7 @@ def _run(stdscr: curses.window) -> int:
         logical_columns = columns // 2
         left = 1
         right = logical_columns - 2
-        top = 2
+        top = _playfield_top(columns)
         bottom = rows - 3
         rng = random.Random()
         snake = _new_snake(rows, columns)

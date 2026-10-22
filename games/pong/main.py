@@ -4,6 +4,7 @@ import random
 import time
 from dataclasses import dataclass
 from typing import Optional
+from terminal_games.controls import draw_control_message, wrap_control_message
 from terminal_games.runtime import RESIZE_EXIT, run_game
 from terminal_games.rendering import draw_cell, draw_rectangle
 
@@ -12,7 +13,7 @@ SIZE_EXIT = 1
 MIN_ROWS = 8
 MIN_COLUMNS = 14
 SIZE_MESSAGE = "Terminal must be at least 8 rows and 14 columns."
-CONTROL_MESSAGE = "Arrows: move; N: new game; E: exit"
+CONTROL_MESSAGE = "↑/↓ move; N new; E exit"
 BALL_TICK_SECONDS = 0.15
 BALL_SPEEDUP_FACTOR = 0.95
 MIN_BALL_TICK_SECONDS = 0.05
@@ -316,7 +317,7 @@ def _draw_grid(
     logical_columns = columns // 2
     left = 1
     right = logical_columns - 2
-    top = 2
+    top = max(2, len(wrap_control_message(CONTROL_MESSAGE, columns)))
     bottom = rows - 3
     middle = logical_columns // 2
 
@@ -324,7 +325,9 @@ def _draw_grid(
     draw_rectangle(stdscr, left, top, right, bottom, curses.color_pair(white_pair))
     for row in range(top + 1, bottom):
         draw_cell(stdscr, row, middle, curses.color_pair(1))
-    stdscr.addnstr(0, 0, CONTROL_MESSAGE, columns, curses.color_pair(message_pair))
+    draw_control_message(
+        stdscr, CONTROL_MESSAGE, columns, curses.color_pair(message_pair)
+    )
     stdscr.refresh()
 
 
@@ -397,7 +400,7 @@ def _run(stdscr: curses.window) -> int:
         black_background = curses.color_pair(1)
         stdscr.bkgd(" ", black_background)
         stdscr.timeout(50)
-        top = 2
+        top = max(2, len(wrap_control_message(CONTROL_MESSAGE, columns)))
         bottom = rows - 3
         surface_top = top + 1
         surface_bottom = bottom - 1
