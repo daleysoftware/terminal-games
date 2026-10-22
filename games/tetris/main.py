@@ -9,7 +9,7 @@ SIZE_EXIT = 1
 MIN_ROWS = 30
 MIN_COLUMNS = 54
 SIZE_MESSAGE = "Terminal must be at least 30 rows and 54 columns."
-CONTROL_MESSAGE = "E: exit  N: new  R: rotate  ←/→: move  ↓: drop"
+CONTROL_MESSAGE = "E exit N new R rotate ←/→ move ↓ drop SPACE pause"
 INNER_WIDTH = 21
 INNER_HEIGHT = 22
 BOARD_WIDTH = 10
@@ -106,6 +106,7 @@ def _draw_grid(
     draw_active: bool = True,
     flashing_rows: tuple[int, ...] = (),
     flash_white: bool = False,
+    paused: bool = False,
 ) -> None:
     inner_left, inner_top, divider_column, panel_divider_row, _ = _layout(rows, columns)
     inner_right = inner_left + INNER_WIDTH - 1
@@ -169,8 +170,8 @@ def _draw_grid(
         panel_divider_row - 1,
     )
 
-    if game_over:
-        message = "GAME OVER"
+    if game_over or paused:
+        message = "GAME OVER" if game_over else "PAUSED"
         message_row = board_top + BOARD_HEIGHT // 2
         message_column = board_left * 2 + (BOARD_WIDTH * 2 - len(message)) // 2
         stdscr.addstr(message_row, message_column, message, curses.color_pair(message_pair))
@@ -278,6 +279,8 @@ def _run(stdscr: curses.window) -> int:
         game_over = _collides(active[1], active[2], active[3], locked)
         score = 0
         next_gravity = time.monotonic() + GRAVITY_INTERVAL
+        paused = False
+        paused_at: float | None = None
         stdscr.timeout(50)
 
         while True:
@@ -292,6 +295,7 @@ def _run(stdscr: curses.window) -> int:
                 next_piece,
                 game_over,
                 score,
+                paused=paused,
             )
             key = stdscr.getch()
             if key == curses.KEY_RESIZE:
@@ -305,9 +309,25 @@ def _run(stdscr: curses.window) -> int:
                 game_over = False
                 score = 0
                 next_gravity = time.monotonic() + GRAVITY_INTERVAL
+                paused = False
+                paused_at = None
+                continue
+
+            if key == ord(" ") and not game_over:
+                now = time.monotonic()
+                if paused:
+                    assert paused_at is not None
+                    next_gravity += now - paused_at
+                    paused = False
+                    paused_at = None
+                else:
+                    paused = True
+                    paused_at = now
                 continue
 
             if game_over:
+                continue
+            if paused:
                 continue
 
             name, cells, piece_row, piece_column = active
