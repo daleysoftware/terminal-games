@@ -162,6 +162,7 @@ def _find_winning_cells(
     board: list[list[str | None]],
 ) -> tuple[tuple[int, int], ...] | None:
     directions = ((0, 1), (1, 0), (1, 1), (1, -1))
+    winning_cells = set()
     for row in range(BOARD_ROWS):
         for column in range(BOARD_COLUMNS):
             team = board[row][column]
@@ -178,8 +179,8 @@ def _find_winning_cells(
                     and board[cell_row][cell_column] == team
                     for cell_row, cell_column in cells
                 ):
-                    return cells
-    return None
+                    winning_cells.update(cells)
+    return tuple(sorted(winning_cells)) if winning_cells else None
 
 
 def _gray_color() -> int:
