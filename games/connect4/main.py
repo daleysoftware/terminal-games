@@ -284,6 +284,7 @@ def _run(stdscr: curses.window) -> int:
         winning_cells = None
         flash_winning_cells = True
         next_winner_toggle = None
+        pending_key = None
 
         while True:
             rows, columns = stdscr.getmaxyx()
@@ -305,7 +306,11 @@ def _run(stdscr: curses.window) -> int:
                 winner=winner,
             )
 
-            key = stdscr.getch()
+            if pending_key is None:
+                key = stdscr.getch()
+            else:
+                key = pending_key
+                pending_key = None
             if key == curses.KEY_RESIZE:
                 return RESIZE_EXIT
             if key in (ord("e"), ord("E")):
@@ -333,6 +338,13 @@ def _run(stdscr: curses.window) -> int:
                 _animate_drop(
                     stdscr, board, current_team, selected_column, landing_row
                 )
+                while True:
+                    queued_key = stdscr.getch()
+                    if queued_key == -1:
+                        break
+                    if queued_key != ord(" "):
+                        pending_key = queued_key
+                        break
                 board[landing_row][selected_column] = current_team
                 winning_cells = _find_winning_cells(board)
                 if winning_cells is not None:
