@@ -137,6 +137,30 @@ class MazeTest(unittest.TestCase):
         stdscr.addnstr.assert_any_call(0, 0, "↑↓←→ move; H hint", 19, 7)
         stdscr.addnstr.assert_any_call(1, 0, "N new; E exit", 19, 7)
 
+    def test_hint_key_ignores_rapid_repeat(self) -> None:
+        stdscr = Mock()
+        stdscr.getmaxyx.return_value = (20, 60)
+        stdscr.getch.side_effect = [ord("h"), ord("h"), ord("e")]
+        maze_factory = lambda height, width, rng: (
+            [" " * width for _ in range(height)],
+            (height - 1, 1),
+            (0, 1),
+        )
+
+        with patch("main.generate_maze", side_effect=maze_factory), patch(
+            "main._initialize_colors", return_value={"passage": 1}
+        ), patch("main.curses.curs_set", return_value=1), patch(
+            "main.curses.color_pair", return_value=1
+        ), patch(
+            "main._draw_game"
+        ) as draw_game, patch(
+            "main.time.monotonic", side_effect=[100.0, 101.0, 101.1]
+        ):
+            self.assertEqual(_run(stdscr), 0)
+
+        self.assertEqual(draw_game.call_count, 2)
+        self.assertTrue(draw_game.call_args_list[-1].args[1].hint_visible)
+
     def test_win_renderer_blinks_completion_message_on_bottom_row(self) -> None:
         stdscr = Mock()
         stdscr.getmaxyx.return_value = (20, 60)

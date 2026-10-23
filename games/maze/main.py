@@ -9,6 +9,7 @@ from terminal_games.rendering import draw_cell
 
 Coordinate = tuple[int, int]
 BLINK_INTERVAL = 0.5
+HINT_DEBOUNCE_SECONDS = 0.25
 CONTROL_MESSAGE = "↑↓←→ move; H hint; N new; E exit"
 WIN_MESSAGE = "Maze complete! Woot! "
 WIN_EMOJI = "🎉"
@@ -297,6 +298,7 @@ def _run(stdscr: curses.window) -> int:
             )
 
         state = new_game()
+        last_hint_toggle = None
         stdscr.timeout(50)
         _draw_game(stdscr, state, color_pairs, maze_top)
 
@@ -308,10 +310,19 @@ def _run(stdscr: curses.window) -> int:
                 return 0
             if key in (ord("n"), ord("N")):
                 state = new_game()
+                last_hint_toggle = None
                 should_draw = True
             elif key in (ord("h"), ord("H")):
-                state.hint_visible = not state.hint_visible
-                should_draw = True
+                now = time.monotonic()
+                if (
+                    last_hint_toggle is None
+                    or now - last_hint_toggle >= HINT_DEBOUNCE_SECONDS
+                ):
+                    state.hint_visible = not state.hint_visible
+                    last_hint_toggle = now
+                    should_draw = True
+                else:
+                    should_draw = False
             else:
                 now = time.monotonic()
                 should_draw = state.update_blink(now)
